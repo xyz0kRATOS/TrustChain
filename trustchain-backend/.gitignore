@@ -1,0 +1,35 @@
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Go build output
+bin/
+dist/
+*.exe
+*.out
+
+# Air live-reload (if you use it)
+tmp/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Uploaded files (if stored locally during dev)
+uploads/

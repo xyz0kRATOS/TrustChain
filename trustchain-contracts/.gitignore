@@ -1,20 +1,29 @@
-# Node modules
-/node_modules
+# Environment
+.env
+.env.local
+.env.*.local
 
-# Compilation output
-/dist
+# Dependencies
+node_modules/
 
-# pnpm deploy output
-/bundle
+# Hardhat
+cache/
+artifacts/
+typechain-types/
 
-# Hardhat Build Artifacts
-/artifacts
+# Coverage
+coverage/
+coverage.json
 
-# Hardhat compilation (v2) support directory
-/cache
+# Deployment logs (contain addresses — commit these intentionally if you want)
+ignition/deployments/
 
-# Typechain output
-/types
+# OS
+.DS_Store
+Thumbs.db
 
-# Hardhat coverage reports
-/coverage
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
