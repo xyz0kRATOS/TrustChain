@@ -2,7 +2,9 @@ package api
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
@@ -11,13 +13,27 @@ import (
 )
 
 // NewRouter builds and returns a configured Gin engine.
-// Only GET /api/health is registered for now.
 func NewRouter(db *pgxpool.Pool, log *zerolog.Logger) *gin.Engine {
 	r := gin.New()
 
 	// Use zerolog-compatible request logger
 	r.Use(gin.Recovery())
 	r.Use(requestLogger(log))
+
+	// ── CORS ─────────────────────────────────────────────────────────────────
+	corsConfig := cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"https://trustchain.xyz",
+		},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Authorization", "X-Request-ID",
+		},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+	r.Use(cors.New(corsConfig))
 
 	// ── Public routes ────────────────────────────────────────────────────────
 	api := r.Group("/api")
@@ -41,8 +57,9 @@ func healthHandler(db *pgxpool.Pool) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, models.APIResponse[map[string]string]{
 			Data: map[string]string{
-				"status":  "ok",
-				"service": "trustchain-backend",
+				"status":    "ok",
+				"service":   "trustchain-backend",
+				"timestamp": time.Now().UTC().Format(time.RFC3339),
 			},
 		})
 	}
