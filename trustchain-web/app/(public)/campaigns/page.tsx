@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { CampaignCard } from '@/components/campaign/CampaignCard';
 import type { Campaign } from '@/components/campaign/CampaignCard';
 import { Button } from '@/components/ui/Button';
@@ -326,14 +327,16 @@ function ApplyCtaCard() {
       <p className="text-sm text-[#9CA3AF] mt-2 leading-relaxed">
         Apply for funding on TrustChain. Manual review, on-chain accountability.
       </p>
-      <Button
-        variant="secondary"
-        size="sm"
-        className="mt-4"
-        id="sidebar-apply-now"
-      >
-        Apply Now →
-      </Button>
+      <Link href="/apply">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-4"
+          id="sidebar-apply-now"
+        >
+          Apply Now →
+        </Button>
+      </Link>
     </div>
   );
 }

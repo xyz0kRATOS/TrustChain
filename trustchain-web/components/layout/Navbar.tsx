@@ -16,6 +16,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Home' },
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/how-it-works', label: 'How It Works' },
+  { href: '/apply', label: 'Apply' },
 ];
 
 // ─── Chain Link Icon ──────────────────────────────────────────────────────────
