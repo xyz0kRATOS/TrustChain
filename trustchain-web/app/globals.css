@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg-base: #0A0F1E;
+  --bg-surface: #111827;
+  --bg-elevated: #1A2235;
+
+  /* Borders */
+  --border-subtle: #1F2937;
+  --border-default: #374151;
+
+  /* Accents */
+  --accent-primary: #2563EB;
+  --accent-primary-hover: #1D4ED8;
+  --accent-secondary: #0D9488;
+  --accent-warning: #D97706;
+  --accent-danger: #DC2626;
+  --accent-danger-hover: #B91C1C;
+
+  /* Text */
+  --text-primary: #F9FAFB;
+  --text-secondary: #9CA3AF;
+  --text-muted: #4B5563;
+
+  /* Glow Effects */
+  --glow-blue: 0 0 20px rgba(37, 99, 235, 0.15);
+  --glow-blue-strong: 0 0 30px rgba(37, 99, 235, 0.25);
+  --glow-teal: 0 0 20px rgba(13, 148, 136, 0.15);
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), 'JetBrains Mono', monospace;
+}
+
+/* ─── Base Reset ────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-base);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* ─── Custom Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg-base);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) var(--bg-base);
+}
+
+/* ─── Focus Styles ──────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Selection ─────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(37, 99, 235, 0.3);
+  color: var(--text-primary);
+}
+
+/* ─── Typography Utilities ──────────────────────────────────────────────── */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #2563EB, #60A5FA);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #2563EB, #0D9488);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* ─── Animation Keyframes ───────────────────────────────────────────────── */
+@keyframes pulse-blue {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bar-fill {
+  from { width: 0%; }
+}
+
+/* ─── Utility Classes ───────────────────────────────────────────────────── */
+@layer components {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  .surface-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.75rem;
+  }
+
+  .glow-blue {
+    box-shadow: var(--glow-blue);
+  }
+
+  .glow-blue-strong {
+    box-shadow: var(--glow-blue-strong);
+  }
+}
