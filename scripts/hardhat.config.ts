@@ -1,11 +1,16 @@
-networks: {
-  hardhat: {},          // local testing — always start here
-  baseSepolia: {        // testnet — deploy here before mainnet
-    url: "https://sepolia.base.org",
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY]
-  },
-  base: {               // mainnet — touch this last
-    url: "https://mainnet.base.org",
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY]
+import { HardhatUserConfig } from "hardhat/config";
+
+const config: HardhatUserConfig = {
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      },
+      viaIR: true
+    }
   }
-}
+};
+
+export default config;

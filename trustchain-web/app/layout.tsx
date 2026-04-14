@@ -5,6 +5,7 @@ import { Providers } from '@/components/layout/Providers';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { LiveActivityFeed } from '@/components/layout/LiveActivityFeed';
+import { BackendStatus } from '@/components/ui/BackendStatus';
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -55,6 +56,9 @@ export default function RootLayout({
             <LiveActivityFeed />
           </div>
         </Providers>
+
+        {/* Dev-only backend connectivity indicator */}
+        <BackendStatus />
       </body>
     </html>
   );
