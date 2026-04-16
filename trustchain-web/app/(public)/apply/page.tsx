@@ -229,6 +229,7 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [appId, setAppId] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   // ── Field updater ──────────────────────────────────────────────────────────
   function updateField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
@@ -319,34 +320,52 @@ export default function ApplyPage() {
     }
 
     setSubmitting(true);
+    setSubmitError('');
 
-    /**
-     * TODO (real backend): POST /api/campaigns/apply
-     * const formData = new FormData();
-     * formData.append('campaignName', form.campaignName);
-     * formData.append('category', form.category);
-     * formData.append('description', form.description);
-     * formData.append('targetGoalUSD', form.targetGoalUSD);
-     * formData.append('imageUrl', form.imageUrl);
-     * formData.append('milestones', JSON.stringify(milestones));
-     * formData.append('fullName', form.fullName);
-     * formData.append('organisation', form.organisation);
-     * formData.append('email', form.email);
-     * formData.append('country', form.country);
-     * formData.append('bio', form.bio);
-     * formData.append('creatorWallet', address ?? '');
-     * docFiles.forEach((f) => formData.append('documents', f));
-     * await fetch('/api/campaigns/apply', { method: 'POST', body: formData });
-     */
+    try {
+      const payload = {
+        name: form.campaignName,
+        category: form.category,
+        description: form.description,
+        goalAmountUsd: parseFloat(form.targetGoalUSD),
+        imageUrl: form.imageUrl || null,
+        creatorWallet: (address ?? '').toLowerCase(),
+        creatorName: form.fullName,
+        creatorEmail: form.email,
+        creatorOrg: form.organisation || null,
+        creatorCountry: form.country,
+        creatorBio: form.bio,
+        milestones: milestones.map((m) => ({
+          name: m.name,
+          description: m.description,
+          amountUsd: parseFloat(m.amountUSD),
+          deadline: new Date(m.deadline).toISOString(),
+          requiredEvidence: m.requiredEvidence,
+        })),
+        documentFileNames: docFiles.map((f) => f.name),
+      };
 
-    // Mock delay
-    await new Promise((r) => setTimeout(r, 1200));
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
 
-    const id = `TC-${Math.floor(100000 + Math.random() * 900000)}`;
-    setAppId(id);
-    setSubmitting(false);
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!res.ok) {
+        setSubmitError(json.error || 'Submission failed. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+
+      setAppId(json.data.id);
+      setSubmitting(false);
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      setSubmitError('Submission failed. Please try again.');
+      setSubmitting(false);
+    }
   }
 
   // ── Char counters ─────────────────────────────────────────────────────────
@@ -818,6 +837,20 @@ export default function ApplyPage() {
           {isConnected && address ? (
             /* ── Connected wallet ─────────────────────────────────── */
             <div className="space-y-4">
+              {submitError && (
+                <div
+                  className="rounded-lg px-4 py-3 text-sm"
+                  style={{
+                    backgroundColor: 'rgba(220,38,38,0.08)',
+                    border: '1px solid rgba(220,38,38,0.3)',
+                    color: '#FCA5A5',
+                  }}
+                  role="alert"
+                >
+                  {submitError}
+                </div>
+              )}
+
               {/* Connected wallet display */}
               <div
                 className="rounded-lg px-4 py-3 flex items-center gap-3"

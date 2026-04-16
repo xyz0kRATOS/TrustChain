@@ -9,13 +9,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 
+	"github.com/amanp/trustchain-backend/internal/api/handlers"
 	"github.com/amanp/trustchain-backend/internal/api/middleware"
+	"github.com/amanp/trustchain-backend/internal/config"
 	"github.com/amanp/trustchain-backend/internal/models"
 )
 
 // NewRouter builds and returns a configured Gin engine.
-func NewRouter(db *pgxpool.Pool, log *zerolog.Logger) *gin.Engine {
+func NewRouter(db *pgxpool.Pool, cfg *config.Config, log *zerolog.Logger) *gin.Engine {
 	r := gin.New()
+	campaignHandler := handlers.NewCampaignHandler(db)
+	adminHandler := handlers.NewAdminHandler(db, campaignHandler, cfg)
+	activityHandler := handlers.NewActivityHandler(db)
 
 	// ── Middleware — CORS MUST be first ──────────────────────────────────────
 	r.Use(middleware.CORS())
@@ -48,20 +53,26 @@ func NewRouter(db *pgxpool.Pool, log *zerolog.Logger) *gin.Engine {
 	// ── Public API routes ────────────────────────────────────────────────────
 	api := r.Group("/api")
 	{
-		api.GET("/campaigns", listCampaignsHandler(db))
+		api.POST("/campaigns/apply", campaignHandler.ApplyCampaign)
+		api.GET("/campaigns", campaignHandler.ListCampaigns)
+		api.GET("/campaigns/:id", campaignHandler.GetCampaign)
+		api.GET("/activity/recent", activityHandler.Recent)
+
+		admin := api.Group("/admin")
+		admin.Use(middleware.AdminOnly(cfg.AdminWallet))
+		{
+			admin.GET("/applications", adminHandler.ListApplications)
+			admin.GET("/campaigns", adminHandler.ListCampaigns)
+			admin.POST("/campaigns/:id/approve", adminHandler.ApproveCampaign)
+			admin.POST("/campaigns/:id/reject", adminHandler.RejectCampaign)
+			admin.POST("/campaigns/:id/deploy", adminHandler.DeployCampaign)
+			admin.POST("/campaigns/:id/milestones/:idx/approve", adminHandler.ApproveMilestone)
+			admin.POST("/campaigns/:id/milestones/:idx/execute-release", adminHandler.ExecuteMilestoneRelease)
+			admin.GET("/stats", adminHandler.Stats)
+		}
 	}
 
 	return r
-}
-
-// listCampaignsHandler is a stub that returns an empty list until the
-// campaigns handler package is wired in.
-func listCampaignsHandler(db *pgxpool.Pool) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, models.APIResponse[[]any]{
-			Data: []any{},
-		})
-	}
 }
 
 // healthHandler returns 200 if the service and DB are healthy.
@@ -90,6 +101,14 @@ func healthHandler(db *pgxpool.Pool) gin.HandlerFunc {
 func requestLogger(log *zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+		if len(c.Errors) > 0 {
+			log.Error().
+				Str("path", c.Request.URL.Path).
+				Str("method", c.Request.Method).
+				Int("status", c.Writer.Status()).
+				Str("errors", c.Errors.String()).
+				Msg("request completed with errors")
+		}
 		log.Info().
 			Str("method", c.Request.Method).
 			Str("path", c.Request.URL.Path).

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { WalletButton } from '@/components/blockchain/WalletButton';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -82,9 +83,13 @@ function HamburgerIcon({ open }: { open: boolean }) {
 
 export function Navbar() {
   const pathname = usePathname();
+  const { address } = useAccount();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const adminWallet = process.env.NEXT_PUBLIC_ADMIN_WALLET;
+  const isAdmin =
+    address && adminWallet && address.toLowerCase() === adminWallet.toLowerCase();
 
   // Glassmorphism on scroll
   useEffect(() => {
@@ -186,6 +191,34 @@ export function Navbar() {
             <div className="hidden sm:block">
               <WalletButton />
             </div>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                id="nav-link-admin"
+                className={[
+                  'hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg',
+                  'text-xs font-medium transition-all duration-200',
+                  'border border-[#374151] text-[#9CA3AF]',
+                  'hover:border-[#2563EB] hover:text-[#60A5FA]',
+                  'hover:bg-[rgba(37,99,235,0.08)]',
+                ].join(' ')}
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                Admin
+              </Link>
+            )}
 
             {/* Hamburger — mobile only */}
             <button
@@ -244,6 +277,35 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                id="mobile-nav-admin"
+                className={[
+                  'flex items-center gap-1.5 px-4 py-3 rounded-lg',
+                  'text-xs font-medium transition-all duration-200',
+                  'border border-[#374151] text-[#9CA3AF]',
+                  'hover:border-[#2563EB] hover:text-[#60A5FA]',
+                  'hover:bg-[rgba(37,99,235,0.08)]',
+                ].join(' ')}
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                Admin
+              </Link>
+            )}
 
             {/* Wallet on mobile */}
             <div className="pt-3 border-t border-[#1F2937] mt-2">

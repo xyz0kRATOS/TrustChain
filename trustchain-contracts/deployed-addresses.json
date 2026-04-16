@@ -1,0 +1,10 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployedAt": "",
+  "timelockController": "",
+  "reputationRegistry": "",
+  "donationNFT": "",
+  "campaignFactory": "",
+  "deployerWallet": ""
+}

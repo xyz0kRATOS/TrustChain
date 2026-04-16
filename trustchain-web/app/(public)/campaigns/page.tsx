@@ -1,149 +1,17 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CampaignCard } from '@/components/campaign/CampaignCard';
 import type { Campaign } from '@/components/campaign/CampaignCard';
 import { Button } from '@/components/ui/Button';
 import type { BadgeVariant } from '@/components/ui/Badge';
+import type { ApiEnvelope, CampaignResponse } from '@/types/campaign';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type CampaignStatus = 'ALL' | 'ACTIVE' | 'COMPLETED' | 'FROZEN';
+type CampaignStatus = 'ALL' | 'ACTIVE' | 'COMPLETED' | 'FROZEN' | 'PENDING';
 type SortOption = 'most_raised' | 'newest' | 'ending_soon' | 'pct_goal';
-
-interface MockCampaign {
-  id: string;
-  name: string;
-  description: string;
-  goalAmount: bigint;
-  totalRaised: bigint;
-  status: 'ACTIVE' | 'COMPLETED' | 'FROZEN';
-  donorCount: number;
-  milestoneCount: number;
-  completedMilestones: number;
-  creatorAddress: string;
-  daysRemaining?: number;
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_CAMPAIGNS: MockCampaign[] = [
-  {
-    id: '1',
-    name: 'Clean Water Project — Nairobi',
-    description: 'Providing clean water access to 3 rural villages through borehole drilling.',
-    goalAmount: BigInt('5000000000000000000'),
-    totalRaised: BigInt('3200000000000000000'),
-    status: 'ACTIVE',
-    donorCount: 47,
-    milestoneCount: 3,
-    completedMilestones: 1,
-    creatorAddress: '0x4a2f8c3d9e1b7f2a',
-    daysRemaining: 24,
-  },
-  {
-    id: '2',
-    name: 'School Rebuild — Rural Kenya',
-    description: 'Rebuilding primary school damaged by flooding. 4 classrooms for 200 students.',
-    goalAmount: BigInt('8000000000000000000'),
-    totalRaised: BigInt('8000000000000000000'),
-    status: 'COMPLETED',
-    donorCount: 124,
-    milestoneCount: 4,
-    completedMilestones: 4,
-    creatorAddress: '0x7b3e9f1a4c2d8e5f',
-  },
-  {
-    id: '3',
-    name: 'Medical Aid — Gaza',
-    description: 'Emergency medical supplies and equipment for a field hospital.',
-    goalAmount: BigInt('10000000000000000000'),
-    totalRaised: BigInt('6100000000000000000'),
-    status: 'ACTIVE',
-    donorCount: 89,
-    milestoneCount: 3,
-    completedMilestones: 0,
-    creatorAddress: '0x9c5d2e4b1a7f3c8d',
-    daysRemaining: 11,
-  },
-  {
-    id: '4',
-    name: 'Flood Relief — Bangladesh',
-    description: 'Emergency shelter materials and food packages for 500 displaced families.',
-    goalAmount: BigInt('6000000000000000000'),
-    totalRaised: BigInt('5800000000000000000'),
-    status: 'ACTIVE',
-    donorCount: 203,
-    milestoneCount: 2,
-    completedMilestones: 1,
-    creatorAddress: '0x2e8f1a9c4d7b3e5f',
-    daysRemaining: 5,
-  },
-  {
-    id: '5',
-    name: 'Solar Panels — Rural Uganda',
-    description: 'Installing solar power for 3 off-grid schools, lighting 800 students.',
-    goalAmount: BigInt('4000000000000000000'),
-    totalRaised: BigInt('1200000000000000000'),
-    status: 'ACTIVE',
-    donorCount: 34,
-    milestoneCount: 3,
-    completedMilestones: 0,
-    creatorAddress: '0x5f2c7a1e9b4d8f3a',
-    daysRemaining: 45,
-  },
-  {
-    id: '6',
-    name: 'Orphanage Renovation — Manila',
-    description: 'Renovation and safety upgrades for a 60-child orphanage in Metro Manila.',
-    goalAmount: BigInt('3000000000000000000'),
-    totalRaised: BigInt('3000000000000000000'),
-    status: 'COMPLETED',
-    donorCount: 67,
-    milestoneCount: 2,
-    completedMilestones: 2,
-    creatorAddress: '0x8a3d5f2c1e9b4a7f',
-  },
-  {
-    id: '7',
-    name: 'Reforestation — Amazon Basin',
-    description: 'Planting 10,000 native trees in degraded Amazon areas with local communities.',
-    goalAmount: BigInt('7000000000000000000'),
-    totalRaised: BigInt('2100000000000000000'),
-    status: 'ACTIVE',
-    donorCount: 58,
-    milestoneCount: 4,
-    completedMilestones: 0,
-    creatorAddress: '0x1b9f4a7c2e5d8a3f',
-    daysRemaining: 60,
-  },
-  {
-    id: '8',
-    name: 'Veteran Housing — Detroit',
-    description: 'Emergency housing assistance for 15 homeless veterans in Detroit.',
-    goalAmount: BigInt('9000000000000000000'),
-    totalRaised: BigInt('900000000000000000'),
-    status: 'FROZEN',
-    donorCount: 28,
-    milestoneCount: 3,
-    completedMilestones: 0,
-    creatorAddress: '0x6d2a8f1c4e7b9a5f',
-  },
-  {
-    id: '9',
-    name: 'Dialysis Centre — Lagos',
-    description: 'Equipment and setup costs for a free dialysis centre serving low-income patients.',
-    goalAmount: BigInt('12000000000000000000'),
-    totalRaised: BigInt('4800000000000000000'),
-    status: 'ACTIVE',
-    donorCount: 112,
-    milestoneCount: 5,
-    completedMilestones: 2,
-    creatorAddress: '0x3f7a1d9c5b2e4f8a',
-    daysRemaining: 30,
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,25 +21,32 @@ function weiToEth(wei: bigint): number {
   return Number((wei * 10_000n) / WEI) / 10_000;
 }
 
-function statusToBadgeVariant(status: MockCampaign['status']): BadgeVariant {
-  const map: Record<MockCampaign['status'], BadgeVariant> = {
-    ACTIVE: 'active',
-    COMPLETED: 'completed',
-    FROZEN: 'frozen',
+function statusToBadgeVariant(status: string): BadgeVariant {
+  const normalized = status.toLowerCase();
+  const map: Record<string, BadgeVariant> = {
+    live: 'active',
+    active: 'active',
+    completed: 'completed',
+    frozen: 'frozen',
+    pending: 'pending',
+    rejected: 'disputed',
   };
-  return map[status];
+  return map[normalized] ?? 'pending';
 }
 
-function mockToCampaign(m: MockCampaign): Campaign {
+function responseToCampaign(m: CampaignResponse): Campaign {
+  const goalWei = m.goalAmountWei ? BigInt(m.goalAmountWei) : 0n;
+  const raisedWei = m.totalRaisedWei ? BigInt(m.totalRaisedWei) : 0n;
   return {
     id: m.id,
     name: m.name,
     description: m.description,
-    goalAmount: weiToEth(m.goalAmount),
-    totalRaised: weiToEth(m.totalRaised),
+    goalAmount: goalWei > 0n ? weiToEth(goalWei) : 0,
+    totalRaised: weiToEth(raisedWei),
     status: statusToBadgeVariant(m.status),
     donorCount: m.donorCount,
-    milestoneCount: m.milestoneCount,
+    milestoneCount: m.milestones.length,
+    imageUrl: m.imageUrl ?? undefined,
   };
 }
 
@@ -344,6 +219,8 @@ function ApplyCtaCard() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CampaignsPage() {
+  const [campaigns, setCampaigns] = useState<CampaignResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CampaignStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('most_raised');
@@ -353,14 +230,41 @@ export default function CampaignsPage() {
     { label: 'Active', value: 'ACTIVE' },
     { label: 'Completed', value: 'COMPLETED' },
     { label: 'Frozen', value: 'FROZEN' },
+    { label: 'Pending', value: 'PENDING' },
   ];
 
+  useEffect(() => {
+    let mounted = true;
+    async function fetchCampaigns() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/campaigns`);
+        const json = (await res.json()) as ApiEnvelope<CampaignResponse[]>;
+        if (!mounted) return;
+        setCampaigns(Array.isArray(json.data) ? json.data : []);
+      } catch {
+        if (!mounted) return;
+        setCampaigns([]);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    fetchCampaigns();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filteredCampaigns = useMemo<Campaign[]>(() => {
-    let results = [...MOCK_CAMPAIGNS];
+    let results = [...campaigns];
 
     // Status filter
     if (statusFilter !== 'ALL') {
-      results = results.filter((c) => c.status === statusFilter);
+      if (statusFilter === 'ACTIVE') {
+        results = results.filter((c) => c.status.toLowerCase() === 'live' || c.status.toLowerCase() === 'active');
+      } else {
+        results = results.filter((c) => c.status.toLowerCase() === statusFilter.toLowerCase());
+      }
     }
 
     // Search filter (case-insensitive, name + description)
@@ -377,24 +281,22 @@ export default function CampaignsPage() {
     results.sort((a, b) => {
       switch (sortOption) {
         case 'most_raised':
-          return Number(b.totalRaised - a.totalRaised);
+          return Number(BigInt(b.totalRaisedWei || '0') - BigInt(a.totalRaisedWei || '0'));
 
         case 'newest':
-          return Number(b.id) - Number(a.id);
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
         case 'ending_soon': {
-          // ACTIVE campaigns with daysRemaining first (ascending), others last
-          const aActive = a.status === 'ACTIVE' && a.daysRemaining !== undefined;
-          const bActive = b.status === 'ACTIVE' && b.daysRemaining !== undefined;
-          if (aActive && bActive) return (a.daysRemaining ?? 0) - (b.daysRemaining ?? 0);
-          if (aActive) return -1;
-          if (bActive) return 1;
           return 0;
         }
 
         case 'pct_goal': {
-          const aPct = a.goalAmount > 0n ? Number((a.totalRaised * 10000n) / a.goalAmount) : 0;
-          const bPct = b.goalAmount > 0n ? Number((b.totalRaised * 10000n) / b.goalAmount) : 0;
+          const aGoal = a.goalAmountWei ? BigInt(a.goalAmountWei) : 0n;
+          const bGoal = b.goalAmountWei ? BigInt(b.goalAmountWei) : 0n;
+          const aRaised = BigInt(a.totalRaisedWei || '0');
+          const bRaised = BigInt(b.totalRaisedWei || '0');
+          const aPct = aGoal > 0n ? Number((aRaised * 10_000n) / aGoal) : 0;
+          const bPct = bGoal > 0n ? Number((bRaised * 10_000n) / bGoal) : 0;
           return bPct - aPct;
         }
 
@@ -403,8 +305,8 @@ export default function CampaignsPage() {
       }
     });
 
-    return results.map(mockToCampaign);
-  }, [statusFilter, searchQuery, sortOption]);
+    return results.map(responseToCampaign);
+  }, [campaigns, statusFilter, searchQuery, sortOption]);
 
   function clearFilters() {
     setStatusFilter('ALL');
@@ -530,7 +432,13 @@ export default function CampaignsPage() {
                 {' '}campaign{filteredCampaigns.length !== 1 ? 's' : ''}
               </p>
 
-              {filteredCampaigns.length === 0 ? (
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-[380px] rounded-xl border border-[#1F2937] bg-[#111827] animate-pulse" />
+                  ))}
+                </div>
+              ) : filteredCampaigns.length === 0 ? (
                 <EmptyState onClear={clearFilters} />
               ) : (
                 <>
@@ -543,14 +451,15 @@ export default function CampaignsPage() {
                   {/* Load More */}
                   <div className="mt-12 text-center">
                     <p className="text-sm text-[#9CA3AF] mb-4">
-                      Showing {filteredCampaigns.length} of 12 campaigns
+                      Showing {filteredCampaigns.length} campaigns
                     </p>
                     <Button
                       variant="ghost"
                       size="md"
                       id="campaigns-load-more"
+                      disabled
                     >
-                      Load more
+                      End of results
                     </Button>
                   </div>
                 </>

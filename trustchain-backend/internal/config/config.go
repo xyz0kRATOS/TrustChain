@@ -18,12 +18,15 @@ type Config struct {
 	DatabaseURL string
 
 	// Auth
-	JWTSecret  string
-	SIWEDomain string
+	JWTSecret       string
+	SIWEDomain      string
+	AdminWallet     string
+	AdminPrivateKey string
 
 	// Blockchain
 	AlchemyBaseSepolia string
 	AlchemyBaseMainnet string
+	ChainID            string
 
 	// Contract addresses
 	AdminMultisigAddress      string
@@ -73,16 +76,20 @@ func Load() (*Config, error) {
 	v.SetDefault("PORT", "8080")
 	v.SetDefault("LOG_LEVEL", "info")
 	v.SetDefault("SIWE_DOMAIN", "localhost")
+	v.SetDefault("CHAIN_ID", "84532")
 
 	cfg := &Config{
 		Port:        v.GetString("PORT"),
 		DatabaseURL: v.GetString("DATABASE_URL"),
 
-		JWTSecret:  v.GetString("JWT_SECRET"),
-		SIWEDomain: v.GetString("SIWE_DOMAIN"),
+		JWTSecret:       v.GetString("JWT_SECRET"),
+		SIWEDomain:      v.GetString("SIWE_DOMAIN"),
+		AdminWallet:     strings.ToLower(v.GetString("ADMIN_WALLET")),
+		AdminPrivateKey: v.GetString("ADMIN_PRIVATE_KEY"),
 
 		AlchemyBaseSepolia: v.GetString("ALCHEMY_BASE_SEPOLIA_URL"),
 		AlchemyBaseMainnet: v.GetString("ALCHEMY_BASE_MAINNET_URL"),
+		ChainID:            v.GetString("CHAIN_ID"),
 
 		AdminMultisigAddress:      v.GetString("ADMIN_MULTISIG_ADDRESS"),
 		TimelockAddress:           v.GetString("TIMELOCK_ADDRESS"),

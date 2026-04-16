@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/amanp/trustchain-backend/internal/api"
+	"github.com/amanp/trustchain-backend/internal/blockchain"
 	"github.com/amanp/trustchain-backend/internal/config"
 	"github.com/amanp/trustchain-backend/internal/db"
 )
@@ -46,8 +47,20 @@ func main() {
 
 	log.Info().Msg("database connection established")
 
+	// Ensure DB schema is up to date for local/dev startup.
+	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := db.ApplyMigrations(migrateCtx, pool, "internal/db/migrations"); err != nil {
+		migrateCancel()
+		log.Fatal().Err(err).Msg("failed to apply database migrations")
+	}
+	migrateCancel()
+	log.Info().Msg("database migrations applied")
+
+	// ── Blockchain watcher (Phase 2 scaffold) ─────────────────────────────────
+	blockchain.Start(pool, cfg)
+
 	// ── Router ────────────────────────────────────────────────────────────────
-	router := api.NewRouter(pool, &log)
+	router := api.NewRouter(pool, cfg, &log)
 
 	// ── HTTP Server ───────────────────────────────────────────────────────────
 	srv := &http.Server{
