@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"net/http"
@@ -291,6 +293,15 @@ func (h *CampaignHandler) ApplyCampaign(c *gin.Context) {
 		deadlineByIndex[i] = deadline
 	}
 
+	var placeholderDocumentHash *string
+	if len(req.DocumentFileNames) > 0 {
+		joinedNames := strings.Join(req.DocumentFileNames, "|")
+		sum := sha256.Sum256([]byte(joinedNames))
+		hash := "0x" + hex.EncodeToString(sum[:])
+		placeholderDocumentHash = &hash
+		// TODO: Replace this placeholder with real file upload to Pinata once frontend sends actual files.
+	}
+
 	diff := totalMilestoneUSD - req.GoalAmountUSD
 	if diff > 1.0 || diff < -1.0 {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -315,9 +326,9 @@ func (h *CampaignHandler) ApplyCampaign(c *gin.Context) {
 		INSERT INTO campaigns (
 			creator_wallet, category, name, description, goal_amount_usd,
 			goal_amount_wei, status, image_url, creator_name, creator_email,
-			creator_org, creator_country, creator_bio, document_file_names
+			creator_org, creator_country, creator_bio, document_hash, document_file_names
 		)
-		VALUES ($1,$2,$3,$4,$5,0,'pending',$6,$7,$8,$9,$10,$11,$12)
+		VALUES ($1,$2,$3,$4,$5,0,'pending',$6,$7,$8,$9,$10,$11,$12,$13)
 		RETURNING id::text
 	`
 
@@ -334,6 +345,7 @@ func (h *CampaignHandler) ApplyCampaign(c *gin.Context) {
 		nullIfBlankPtr(req.CreatorOrg),
 		nullIfBlank(req.CreatorCountry),
 		nullIfBlank(req.CreatorBio),
+		placeholderDocumentHash,
 		req.DocumentFileNames,
 	).Scan(&campaignID)
 	if err != nil {

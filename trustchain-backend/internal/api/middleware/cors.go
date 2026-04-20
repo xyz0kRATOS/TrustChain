@@ -25,6 +25,7 @@ func CORS() gin.HandlerFunc {
 			"Content-Length",
 			"Accept",
 			"Authorization",
+			"X-Admin-Wallet",
 			"X-Request-ID",
 		},
 		ExposeHeaders: []string{

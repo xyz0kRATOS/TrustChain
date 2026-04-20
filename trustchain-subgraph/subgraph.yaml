@@ -1,0 +1,146 @@
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+
+dataSources:
+  - kind: ethereum/contract
+    name: CampaignFactory
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: CampaignFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Campaign
+        - Milestone
+        - FundraiserProfile
+      abis:
+        - name: CampaignFactory
+          file: ../trustchain-contracts/artifacts/contracts/CampaignFactory.sol/CampaignFactory.json
+      eventHandlers:
+        - event: CampaignCreated(indexed address,indexed address,indexed uint256,uint256,uint256,bytes32)
+          handler: handleCampaignCreated
+      file: ./src/mappings.ts
+
+  - kind: ethereum/contract
+    name: DonationNFT
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: DonationNFT
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Donation
+      abis:
+        - name: DonationNFT
+          file: ../trustchain-contracts/artifacts/contracts/DonationNFT.sol/DonationNFT.json
+      eventHandlers:
+        - event: DonationNFTMinted(indexed uint256,indexed address,indexed address,uint256,string)
+          handler: handleDonationNFTMinted
+      file: ./src/mappings.ts
+
+  - kind: ethereum/contract
+    name: ReputationRegistry
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: ReputationRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - FundraiserProfile
+      abis:
+        - name: ReputationRegistry
+          file: ../trustchain-contracts/artifacts/contracts/ReputationRegistry.sol/ReputationRegistry.json
+      eventHandlers:
+        - event: ReputationUpdated(indexed address,int256,string)
+          handler: handleReputationUpdated
+      file: ./src/mappings.ts
+
+  - kind: ethereum/contract
+    name: Campaign
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: Campaign
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Campaign
+        - Milestone
+        - Donation
+        - FundRelease
+        - DonorRefund
+      abis:
+        - name: Campaign
+          file: ../trustchain-contracts/artifacts/contracts/Campaign.sol/Campaign.json
+      eventHandlers:
+        - event: DonationReceived(indexed address,uint256,indexed uint256,uint256)
+          handler: handleDonationReceived
+        - event: MilestoneApproved(indexed uint256,indexed address,uint256)
+          handler: handleMilestoneApproved
+        - event: FundsReleased(indexed uint256,uint256,indexed address)
+          handler: handleFundsReleased
+        - event: CampaignFrozen(indexed address,uint256)
+          handler: handleCampaignFrozen
+        - event: DonorRefunded(indexed address,uint256)
+          handler: handleDonorRefunded
+        - event: CampaignCompleted(uint256)
+          handler: handleCampaignCompleted
+        - event: CampaignUpdated(indexed uint256,bytes32,string,uint256)
+          handler: handleCampaignUpdated
+        - event: MilestoneAmended(indexed uint256,bytes32,uint256)
+          handler: handleMilestoneAmended
+      file: ./src/mappings.ts
+
+templates:
+  - kind: ethereum/contract
+    name: CampaignTemplate
+    network: base-sepolia
+    source:
+      abi: Campaign
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Campaign
+        - Milestone
+        - Donation
+        - FundRelease
+        - DonorRefund
+      abis:
+        - name: Campaign
+          file: ../trustchain-contracts/artifacts/contracts/Campaign.sol/Campaign.json
+      eventHandlers:
+        - event: DonationReceived(indexed address,uint256,indexed uint256,uint256)
+          handler: handleDonationReceived
+        - event: MilestoneApproved(indexed uint256,indexed address,uint256)
+          handler: handleMilestoneApproved
+        - event: FundsReleased(indexed uint256,uint256,indexed address)
+          handler: handleFundsReleased
+        - event: CampaignFrozen(indexed address,uint256)
+          handler: handleCampaignFrozen
+        - event: DonorRefunded(indexed address,uint256)
+          handler: handleDonorRefunded
+        - event: CampaignCompleted(uint256)
+          handler: handleCampaignCompleted
+        - event: CampaignUpdated(indexed uint256,bytes32,string,uint256)
+          handler: handleCampaignUpdated
+        - event: MilestoneAmended(indexed uint256,bytes32,uint256)
+          handler: handleMilestoneAmended
+      file: ./src/mappings.ts

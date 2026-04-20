@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [allCampaigns, setAllCampaigns] = useState<CampaignResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const adminHeaders = useMemo(
     () => ({
@@ -55,27 +56,63 @@ export default function AdminPage() {
     [connectedWallet],
   );
 
+  const adminFetch = useCallback(
+    (url: string, options?: RequestInit) => {
+      if (!address) {
+        throw new Error('No wallet connected')
+      }
+
+      return fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Wallet': address,
+          ...options?.headers,
+        },
+      })
+    },
+    [address],
+  )
+
   const loadDashboard = useCallback(async () => {
     if (!isAdmin) return;
     setLoading(true);
+    setFetchError(null);
     try {
       const [statsRes, pendingRes, allRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/stats`, { headers: adminHeaders }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/applications`, { headers: adminHeaders }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/campaigns`, { headers: adminHeaders }),
+        adminFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/stats`),
+        adminFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/applications`),
+        adminFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/campaigns`),
       ]);
 
       const statsJson = (await statsRes.json()) as ApiEnvelope<AdminStats>;
       const pendingJson = (await pendingRes.json()) as ApiEnvelope<CampaignResponse[]>;
       const allJson = (await allRes.json()) as ApiEnvelope<CampaignResponse[]>;
 
+      if (!statsRes.ok) {
+        setFetchError(`API error ${statsRes.status}: ${statsJson.error || 'Unknown error'}`)
+        return
+      }
+      if (!pendingRes.ok) {
+        setFetchError(`API error ${pendingRes.status}: ${pendingJson.error || 'Unknown error'}`)
+        return
+      }
+      if (!allRes.ok) {
+        setFetchError(`API error ${allRes.status}: ${allJson.error || 'Unknown error'}`)
+        return
+      }
+
       setStats(statsJson.data || emptyStats);
       setPending(Array.isArray(pendingJson.data) ? pendingJson.data : []);
       setAllCampaigns(Array.isArray(allJson.data) ? allJson.data : []);
+    } catch (err) {
+      setFetchError(
+        err instanceof Error ? err.message : 'Network error — is the backend running?',
+      )
     } finally {
       setLoading(false);
     }
-  }, [adminHeaders, isAdmin]);
+  }, [adminFetch, isAdmin]);
 
   useEffect(() => {
     loadDashboard();
@@ -88,25 +125,23 @@ export default function AdminPage() {
   }, [toast]);
 
   async function approveCampaign(id: string, notes: string) {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/campaigns/${id}/approve`, {
+    const res = await adminFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/campaigns/${id}/approve`, {
       method: 'POST',
-      headers: { ...adminHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ adminWallet: connectedWallet.toLowerCase(), notes: notes || null }),
     });
     const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Approval failed');
+    if (!res.ok) throw new Error(json.error || `API error ${res.status}`);
     setToast(`✓ ${json.data.name} approved and now live`);
     await loadDashboard();
   }
 
   async function rejectCampaign(id: string, reason: string) {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/campaigns/${id}/reject`, {
+    const res = await adminFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/campaigns/${id}/reject`, {
       method: 'POST',
-      headers: { ...adminHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ adminWallet: connectedWallet.toLowerCase(), reason }),
     });
     const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Rejection failed');
+    if (!res.ok) throw new Error(json.error || `API error ${res.status}`);
     const target = allCampaigns.find((c) => c.id === id);
     setToast(`${target?.name || 'Campaign'} rejected`);
     await loadDashboard();
@@ -181,7 +216,18 @@ export default function AdminPage() {
 
         {!loading && tab === 'pending' && (
           <div className="mt-6 space-y-4">
-            {pending.length === 0 ? <p className="text-[#6B7280]">No pending applications.</p> : null}
+            {fetchError && (
+              <div className="rounded-xl border border-[#DC2626] bg-[#450A0A] px-5 py-4 text-sm text-[#FCA5A5]">
+                <span className="font-semibold">Error loading applications: </span>
+                {fetchError}
+              </div>
+            )}
+            {!fetchError && pending.length === 0 && !loading ? (
+              <div className="py-16 text-center text-[#4B5563]">
+                <p className="text-lg">No pending applications</p>
+                <p className="mt-1 text-sm">Submitted campaigns will appear here</p>
+              </div>
+            ) : null}
             {pending.map((campaign) => (
               <ApplicationCard key={campaign.id} campaign={campaign} onApprove={approveCampaign} onReject={rejectCampaign} />
             ))}

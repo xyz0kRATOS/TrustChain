@@ -1,0 +1,52 @@
+type Campaign @entity {
+  id: ID!
+  creator: FundraiserProfile!
+  goalAmount: BigInt!
+  status: String!
+  totalRaised: BigInt!
+  milestones: [Milestone!]! @derivedFrom(field: "campaign")
+  donations: [Donation!]! @derivedFrom(field: "campaign")
+  createdAt: BigInt!
+}
+
+type Milestone @entity {
+  id: ID!
+  campaign: Campaign!
+  index: Int!
+  status: String!
+  amount: BigInt!
+  deadline: BigInt!
+  fundsReleased: Boolean!
+}
+
+type Donation @entity {
+  id: ID!
+  campaign: Campaign!
+  donor: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+  nftTokenId: BigInt
+}
+
+type FundRelease @entity {
+  id: ID!
+  campaign: Campaign!
+  milestone: Milestone!
+  amount: BigInt!
+  timestamp: BigInt!
+}
+
+type DonorRefund @entity {
+  id: ID!
+  campaign: Campaign!
+  donor: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+}
+
+type FundraiserProfile @entity {
+  id: ID!
+  wallet: Bytes!
+  score: BigInt!
+  campaigns: [Campaign!]! @derivedFrom(field: "creator")
+}

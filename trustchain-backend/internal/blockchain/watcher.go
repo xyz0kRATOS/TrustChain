@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -362,4 +363,118 @@ func Start(pool *pgxpool.Pool, cfg *config.Config) {
 
 	watcher := NewWatcher(client, pool, cfg)
 	go watcher.Start(context.Background())
+
+	startLiveCampaignDonationWatchers(context.Background(), client, pool)
+}
+
+func WatchCampaignDonations(ctx context.Context, client *Client, db *pgxpool.Pool, contractAddress string, campaignID string) {
+	if !common.IsHexAddress(contractAddress) {
+		log.Warn().Str("contractAddress", contractAddress).Str("campaignID", campaignID).Msg("invalid campaign contract address for donation watcher")
+		return
+	}
+
+	addr := common.HexToAddress(contractAddress)
+	filterer, err := bindings.NewCampaignFilterer(addr, client.Eth())
+	if err != nil {
+		log.Error().Err(err).Str("contractAddress", contractAddress).Str("campaignID", campaignID).Msg("failed to bind campaign filterer for donation watcher")
+		return
+	}
+
+	var campaignName string
+	if err := db.QueryRow(ctx, `
+		SELECT name
+		FROM campaigns
+		WHERE id = $1::uuid
+	`, campaignID).Scan(&campaignName); err != nil {
+		log.Error().Err(err).Str("campaignID", campaignID).Msg("failed to load campaign name for donation watcher")
+		return
+	}
+
+	eventCh := make(chan *bindings.CampaignDonationReceived)
+	sub, err := filterer.WatchDonationReceived(&bind.WatchOpts{Context: ctx}, eventCh, nil, nil)
+	if err != nil {
+		log.Error().Err(err).Str("campaignID", campaignID).Str("contractAddress", contractAddress).Msg("failed to subscribe to DonationReceived")
+		return
+	}
+	defer sub.Unsubscribe()
+
+	log.Info().Str("campaignID", campaignID).Str("contractAddress", contractAddress).Msg("campaign donation watcher subscribed")
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Str("campaignID", campaignID).Str("contractAddress", contractAddress).Msg("campaign donation watcher stopped")
+			return
+		case err := <-sub.Err():
+			if err != nil {
+				log.Error().Err(err).Str("campaignID", campaignID).Str("contractAddress", contractAddress).Msg("campaign donation watcher subscription error")
+			}
+			return
+		case evt := <-eventCh:
+			if evt == nil {
+				continue
+			}
+
+			donorWallet := strings.ToLower(evt.Donor.Hex())
+			txHash := evt.Raw.TxHash.Hex()
+			amountWei := evt.Amount.String()
+
+			_, err := db.Exec(ctx, `
+				INSERT INTO donations (campaign_id, donor_wallet, amount_wei, tx_hash, block_number, donated_at)
+				VALUES ($1::uuid, $2, $3, $4, $5, NOW())
+				ON CONFLICT (tx_hash) DO NOTHING
+			`, campaignID, donorWallet, amountWei, txHash, int64(evt.Raw.BlockNumber))
+			if err != nil {
+				log.Error().Err(err).Str("campaignID", campaignID).Str("txHash", txHash).Msg("failed to insert donation from subscription")
+				continue
+			}
+
+			_, err = db.Exec(ctx, `
+				INSERT INTO campaign_activity (type, campaign_id, campaign_name, wallet, tx_hash, amount_wei, created_at)
+				VALUES ('donation_received', $1::uuid, $2, $3, $4, $5, NOW())
+			`, campaignID, campaignName, donorWallet, txHash, amountWei)
+			if err != nil {
+				log.Error().Err(err).Str("campaignID", campaignID).Str("txHash", txHash).Msg("failed to insert campaign_activity from subscription")
+				continue
+			}
+
+			_, err = db.Exec(ctx, `
+				INSERT INTO access_grants (campaign_id, donor_wallet, granted_at)
+				VALUES ($1::uuid, $2, NOW())
+				ON CONFLICT (campaign_id, donor_wallet) DO NOTHING
+			`, campaignID, donorWallet)
+			if err != nil {
+				log.Error().Err(err).Str("campaignID", campaignID).Str("txHash", txHash).Msg("failed to insert access grant from subscription")
+				continue
+			}
+		}
+	}
+}
+
+func startLiveCampaignDonationWatchers(ctx context.Context, client *Client, db *pgxpool.Pool) {
+	rows, err := db.Query(ctx, `
+		SELECT id::text, contract_address
+		FROM campaigns
+		WHERE LOWER(status) = 'live' AND contract_address IS NOT NULL
+	`)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to load live campaigns for donation watchers")
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var campaignID string
+		var contractAddress string
+		if err := rows.Scan(&campaignID, &contractAddress); err != nil {
+			log.Error().Err(err).Msg("failed to scan live campaign row for donation watcher")
+			continue
+		}
+
+		go WatchCampaignDonations(ctx, client, db, contractAddress, campaignID)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Error().Err(err).Msg("failed iterating live campaigns for donation watchers")
+	}
 }
